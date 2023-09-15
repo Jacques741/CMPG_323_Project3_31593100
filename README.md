@@ -1,1 +1,6 @@
 # CMPG_323_Project3_31593100
+
+## Register and Log in
+
+Register as a user and log in.
+Go to Customer, Order pr Product and create, edit and delete as you please.
