@@ -1,54 +1,41 @@
-﻿using Data;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Models;
+using Data;
 
-
-namespace EcoPower_Logistics.Repository
+namespace Repositories
 {
     public class OrderRepository
     {
-        protected readonly SuperStoreContext _context = new SuperStoreContext();
-        //Get All
-        public IEnumerable<Order> GetAll()
+        private readonly SuperStoreContext _context;
+
+        public OrderRepository(SuperStoreContext context)
         {
-            return _context.Orders.Include(o => o.Customer).ToList();
+            _context = context;
         }
 
-        //Get By ID
-        public async Task<Order> GetById(int id)
+        public async Task<List<Order>> GetAllOrdersAsync()
+        {
+            return await _context.Orders.Include(o => o.Customer).ToListAsync();
+        }
+
+        public async Task<Order> GetOrderByIdAsync(int id)
         {
             return await _context.Orders
                 .Include(o => o.Customer)
                 .FirstOrDefaultAsync(m => m.OrderId == id);
         }
 
-        //Create orders
-        public async Task Create(Order order)
+        public async Task CreateOrderAsync(Order order)
         {
             _context.Add(order);
             await _context.SaveChangesAsync();
         }
 
-        public IEnumerable<SelectListItem> GetLists()
-        {
-            return new SelectList(_context.Customers, "CustomerId", "CustomerId");
-        }
-
-        //Methods to enable edit
-        public async Task<Order> GetOrderById(int id)
-        {
-            return await _context.Orders.FindAsync(id);
-        }
-
-        public IEnumerable<SelectListItem> GetCustomerSelectList()
-        {
-            // Assuming you have a Customers DbSet in your context
-            return new SelectList(_context.Customers, "CustomerId", "CustomerId");
-        }
-
-        //Edit orders
-        public async Task Update(Order order)
+        public async Task UpdateOrderAsync(Order order)
         {
             try
             {
@@ -57,19 +44,11 @@ namespace EcoPower_Logistics.Repository
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!Exists(order.OrderId))
-                {
-                    throw new InvalidOperationException("Order not found.");
-                }
-                else
-                {
-                    throw;
-                }
+                // Handle concurrency exception
             }
         }
 
-        //Delete an order
-        public async Task DeleteOrder(int id)
+        public async Task DeleteOrderAsync(int id)
         {
             var order = await _context.Orders.FindAsync(id);
             if (order != null)
@@ -78,10 +57,15 @@ namespace EcoPower_Logistics.Repository
                 await _context.SaveChangesAsync();
             }
         }
-        //Check wheter an order exists
-        public bool Exists(int id)
+
+        public bool OrderExists(int id)
         {
             return _context.Orders.Any(e => e.OrderId == id);
+        }
+
+        public List<Customer> GetCustomers()
+        {
+            return _context.Customers.ToList();
         }
     }
 }

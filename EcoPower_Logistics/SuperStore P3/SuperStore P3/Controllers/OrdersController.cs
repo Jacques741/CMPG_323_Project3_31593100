@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Models;
-using EcoPower_Logistics.Repository;
+using Repositories; // Include the repository namespace
 
 namespace Controllers
 {
@@ -18,64 +22,67 @@ namespace Controllers
         // GET: Orders
         public async Task<IActionResult> Index()
         {
-            var order = _orderRepository.GetAll();
-            return Ok(order);
+            var orders = await _orderRepository.GetAllOrdersAsync();
+            return View(orders);
         }
 
         // GET: Orders/Details/5
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int? id)
         {
-            var orderId = _orderRepository.GetById(id);
-
-            if (orderId == null)
+            if (id == null || !_orderRepository.OrderExists(id.Value))
             {
-                //Return 404 not found if order is not found
                 return NotFound();
             }
 
-            return View(orderId);
+            var order = await _orderRepository.GetOrderByIdAsync(id.Value);
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            return View(order);
         }
 
         // GET: Orders/Create
         public IActionResult Create()
         {
-            ViewData["CustomerId"] = _orderRepository.GetLists();
+            // Add any necessary data loading logic if needed
+            ViewData["CustomerId"] = new SelectList(_orderRepository.GetCustomers(), "CustomerId", "CustomerId");
             return View();
         }
 
         // POST: Orders/Create
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("OrderId,OrderDate,CustomerId,DeliveryAddress")] Order order)
         {
             if (ModelState.IsValid)
             {
-                await _orderRepository.Create(order);
+                await _orderRepository.CreateOrderAsync(order);
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["CustomerId"] = _orderRepository.GetLists();
+            // Add any necessary data loading logic if needed
+            ViewData["CustomerId"] = new SelectList(_orderRepository.GetCustomers(), "CustomerId", "CustomerId", order.CustomerId);
             return View(order);
         }
-
-
 
         // GET: Orders/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
+            if (id == null || !_orderRepository.OrderExists(id.Value))
             {
                 return NotFound();
             }
 
-            var order = await _orderRepository.GetById(id.Value);
+            var order = await _orderRepository.GetOrderByIdAsync(id.Value);
             if (order == null)
             {
                 return NotFound();
             }
 
-            ViewData["CustomerId"] = _orderRepository.GetLists();
+            // Add any necessary data loading logic if needed
+            ViewData["CustomerId"] = new SelectList(_orderRepository.GetCustomers(), "CustomerId", "CustomerId", order.CustomerId);
             return View(order);
         }
 
@@ -91,31 +98,24 @@ namespace Controllers
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    await _orderRepository.Update(order);
-                }
-                catch (InvalidOperationException)
-                {
-                    return NotFound();
-                }
-
+                await _orderRepository.UpdateOrderAsync(order);
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["CustomerId"] = _orderRepository.GetLists();
+            // Add any necessary data loading logic if needed
+            ViewData["CustomerId"] = new SelectList(_orderRepository.GetCustomers(), "CustomerId", "CustomerId", order.CustomerId);
             return View(order);
         }
 
         // GET: Orders/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
+            if (id == null || !_orderRepository.OrderExists(id.Value))
             {
                 return NotFound();
             }
 
-            var order = await _orderRepository.GetById(id.Value);
+            var order = await _orderRepository.GetOrderByIdAsync(id.Value);
             if (order == null)
             {
                 return NotFound();
@@ -129,24 +129,8 @@ namespace Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _orderRepository.DeleteOrder(id);
+            await _orderRepository.DeleteOrderAsync(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        // GET: Orders/Exists/5
-        [HttpGet("Exists/{id}")]
-        public IActionResult Exist(int id)
-        {
-            bool orderExists = _orderRepository.Exists(id);
-
-            if (orderExists)
-            {
-                return Content("Order does indeed exists.");
-            }
-            else
-            {
-                return Content("Order does not exists at all.");
-            }
         }
     }
 }
