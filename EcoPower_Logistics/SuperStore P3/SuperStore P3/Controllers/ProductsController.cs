@@ -8,42 +8,37 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Data;
 using Models;
+using EcoPower_Logistics.Repository;
 
 namespace Controllers
 {
     [Authorize]
     public class ProductsController : Controller
     {
-        private readonly SuperStoreContext _context;
+        private readonly ProductRepository _productRepository;
 
-        public ProductsController(SuperStoreContext context)
+        public ProductsController()
         {
-            _context = context;
+            _productRepository = new ProductRepository();
         }
 
         // GET: Products
         public async Task<IActionResult> Index()
         {
-            return _context.Products != null ?
-                        View(await _context.Products.ToListAsync()) :
-                        Problem("Entity set 'SuperStoreContext.Products'  is null.");
+            ProductRepository productRepository = new ProductRepository();
+
+            var results = productRepository.GetAll();
+            return View(results);
         }
 
         // GET: Products/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int id)
         {
-            if (id == null || _context.Products == null)
-            {
-                return NotFound();
-            }
-
-            var product = await _context.Products
-                .FirstOrDefaultAsync(m => m.ProductId == id);
+            Product product = _productRepository.GetDetails(id);
             if (product == null)
             {
                 return NotFound();
             }
-
             return View(product);
         }
 
@@ -54,112 +49,117 @@ namespace Controllers
         }
 
         // POST: Products/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ProductId,ProductName,ProductDescription,UnitsInStock")] Product product)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(product);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _productRepository.Create(product);
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    //Handle exceptions that occur during creation
+                    ModelState.AddModelError(string.Empty, "An error occurred while creating the product.");
+                }
             }
             return View(product);
         }
 
         // GET: Products/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        public async Task<IActionResult> Edit(int id)
         {
-            if (id == null || _context.Products == null)
+            try
             {
-                return NotFound();
+                Product product = _productRepository.GetDetails(id);
+                if (product == null)
+                {
+                    //Return 404 status if product is not found
+                    return NotFound();
+                }
+                return View(product);
             }
-
-            var product = await _context.Products.FindAsync(id);
-            if (product == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                //Handle other exceptions such as database errors
+                ModelState.AddModelError(string.Empty, "An error ocurred while loading the product for editing");
+                return View();
             }
-            return View(product);
         }
 
         // POST: Products/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("ProductId,ProductName,ProductDescription,UnitsInStock")] Product product)
         {
             if (id != product.ProductId)
             {
-                return NotFound();
+                return BadRequest();
             }
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(product);
-                    await _context.SaveChangesAsync();
+                    _productRepository.Edit(product);
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (ArgumentException ex)
                 {
-                    if (!ProductExists(product.ProductId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    //Return 404 if product is not found
+                    return NotFound();
                 }
-                return RedirectToAction(nameof(Index));
+                catch (Exception ex)
+                {
+                    // Handle other exceptions, such as database errors, here.
+                    ModelState.AddModelError(string.Empty, "An error occurred while updating the product.");
+                    return View(product);
+                }
             }
+            //// If ModelState is not valid, return to the edit view with validation errors
             return View(product);
         }
 
-        // GET: Products/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null || _context.Products == null)
-            {
-                return NotFound();
-            }
-
-            var product = await _context.Products
-                .FirstOrDefaultAsync(m => m.ProductId == id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-
-            return View(product);
-        }
-
-        // POST: Products/Delete/5
+        // GET: Product/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            if (_context.Products == null)
+            try
             {
-                return Problem("Entity set 'SuperStoreContext.Products'  is null.");
+                _productRepository.Delete(id);
+                return RedirectToAction(nameof(Index));
             }
-            var product = await _context.Products.FindAsync(id);
-            if (product != null)
+            catch (ArgumentException ex)
             {
-                _context.Products.Remove(product);
+                // Handle the case where the product with the given ID was not found.
+                return (NotFound());
+
+            }
+            catch (Exception ex)
+            {
+                //Other exceptions such as database errors
+                ModelState.AddModelError(String.Empty, "An error occured while deleting product.");
+                return View(nameof(Index));
             }
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
         }
-
-        private bool ProductExists(int id)
+        //Check if product exists
+        public IActionResult Exist(int id)
         {
-            return (_context.Products?.Any(e => e.ProductId == id)).GetValueOrDefault();
+            bool productExists = _productRepository.Exists(id);
+
+            if (productExists)
+            {
+                return Content("Product does indeed exists.");
+            }
+            else
+            {
+                return Content("Product does not exists at all.");
+            }
         }
     }
 }

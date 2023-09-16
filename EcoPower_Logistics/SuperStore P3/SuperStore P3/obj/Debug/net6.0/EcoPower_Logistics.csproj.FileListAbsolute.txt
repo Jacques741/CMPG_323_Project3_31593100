@@ -570,3 +570,6 @@ C:\Users\jacqu\source\repos\CMPG_323_Project3_31593100\EcoPower_Logistics\SuperS
 C:\Users\jacqu\source\repos\CMPG_323_Project3_31593100\EcoPower_Logistics\SuperStore P3\SuperStore P3\obj\Debug\net6.0\EcoPower_Logistics.pdb
 C:\Users\jacqu\source\repos\CMPG_323_Project3_31593100\EcoPower_Logistics\SuperStore P3\SuperStore P3\obj\Debug\net6.0\EcoPower_Logistics.genruntimeconfig.cache
 C:\Users\jacqu\source\repos\CMPG_323_Project3_31593100\EcoPower_Logistics\SuperStore P3\SuperStore P3\obj\Debug\net6.0\ref\EcoPower_Logistics.dll
+C:\Users\jacqu\source\repos\CMPG_323_Project3_31593100\EcoPower_Logistics\SuperStore P3\SuperStore P3\bin\Debug\net6.0\Microsoft.AspNetCore.JsonPatch.dll
+C:\Users\jacqu\source\repos\CMPG_323_Project3_31593100\EcoPower_Logistics\SuperStore P3\SuperStore P3\bin\Debug\net6.0\Microsoft.AspNetCore.Mvc.NewtonsoftJson.dll
+C:\Users\jacqu\source\repos\CMPG_323_Project3_31593100\EcoPower_Logistics\SuperStore P3\SuperStore P3\bin\Debug\net6.0\Newtonsoft.Json.Bson.dll
