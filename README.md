@@ -7,4 +7,4 @@ Go to Customer, Order pr Product and create, edit and delete as you please.
 
 ##Hosting
 
-Published beneath EcoPowerLogistics3
+Published beneath EcoPowerLogistics3 in the CMPG_323_Project2 resource group
