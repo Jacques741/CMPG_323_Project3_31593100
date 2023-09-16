@@ -4,3 +4,7 @@
 
 Register as a user and log in.
 Go to Customer, Order pr Product and create, edit and delete as you please.
+
+##Hosting
+
+Published beneath EcoPowerLogistics3
