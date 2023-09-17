@@ -8,42 +8,38 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Data;
 using Models;
+using EcoPower_Logistics.Repository;
+using System.Linq.Expressions;
 
 namespace Controllers
 {
     [Authorize]
     public class CustomersController : Controller
     {
-        private readonly SuperStoreContext _context;
-
-        public CustomersController(SuperStoreContext context)
+        
+        private readonly CustomerRepository _customerRepository;
+        public CustomersController()
         {
-            _context = context;
+            _customerRepository = new CustomerRepository();
         }
 
         // GET: Customers
         public async Task<IActionResult> Index()
         {
-            return _context.Customers != null ?
-                        View(await _context.Customers.ToListAsync()) :
-                        Problem("Entity set 'SuperStoreContext.Customers'  is null.");
+            CustomerRepository customerRepository = new CustomerRepository();
+
+            var results = customerRepository.GetAll();
+            return View(results);
         }
 
         // GET: Customers/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int id)
         {
-            if (id == null || _context.Customers == null)
-            {
-                return NotFound();
-            }
-
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.CustomerId == id);
+            Customer customer = _customerRepository.GetDetails(id);
             if (customer == null)
             {
                 return NotFound();
             }
-
             return View(customer);
         }
 
@@ -54,112 +50,118 @@ namespace Controllers
         }
 
         // POST: Customers/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("CustomerId,CustomerTitle,CustomerName,CustomerSurname,CellPhone")] Customer customer)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(customer);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    _customerRepository.Create(customer);
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    //Handle exceptions that occur during creation
+                    ModelState.AddModelError(string.Empty, "An error occurred while creating the customer.");
+                }
             }
             return View(customer);
         }
 
         // GET: Customers/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        public async Task<IActionResult> Edit(int id)
         {
-            if (id == null || _context.Customers == null)
+            try
             {
-                return NotFound();
+                Customer customer = _customerRepository.GetDetails(id);
+                if (customer == null)
+                {
+                    //Return 404 status if customer is not found
+                    return NotFound();
+                }
+                return View(customer);
             }
-
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                //Handle other exceptions such as database errors
+                ModelState.AddModelError(string.Empty, "An error ocurred while loading the customer for editing");
+                return View();
             }
-            return View(customer);
         }
 
         // POST: Customers/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("CustomerId,CustomerTitle,CustomerName,CustomerSurname,CellPhone")] Customer customer)
         {
-            if (id != customer.CustomerId)
+           if(id != customer.CustomerId)
             {
-                return NotFound();
+                return BadRequest();
             }
 
-            if (ModelState.IsValid)
+           if(ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(customer);
-                    await _context.SaveChangesAsync();
+                    _customerRepository.Edit(customer);
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch(ArgumentException ex)
                 {
-                    if (!CustomerExists(customer.CustomerId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    //Return 404 if customer is not found
+                    return NotFound();
                 }
-                return RedirectToAction(nameof(Index));
+                catch(Exception ex)
+                {
+                    // Handle other exceptions, such as database errors, here.
+                    ModelState.AddModelError(string.Empty, "An error occurred while updating the customer.");
+                    return View(customer);
+                }
             }
+            //// If ModelState is not valid, return to the edit view with validation errors
             return View(customer);
         }
 
         // GET: Customers/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null || _context.Customers == null)
-            {
-                return NotFound();
-            }
-
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.CustomerId == id);
-            if (customer == null)
-            {
-                return NotFound();
-            }
-
-            return View(customer);
-        }
-
-        // POST: Customers/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            if (_context.Customers == null)
+            try
             {
-                return Problem("Entity set 'SuperStoreContext.Customers'  is null.");
+                _customerRepository.Delete(id);
+                return RedirectToAction(nameof(Index));
             }
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer != null)
+            catch (ArgumentException ex)
             {
-                _context.Customers.Remove(customer);
+                // Handle the case where the customer with the given ID was not found.
+                return(NotFound());
+
+            }
+            catch (Exception ex)
+            {
+                //Other exceptions such as database errors
+                ModelState.AddModelError(String.Empty, "An error occured while deleting customer.");
+                return View(nameof(Index));
             }
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
         }
 
-        private bool CustomerExists(int id)
+        //Check if customer exists
+        public IActionResult Exist(int id)
         {
-            return (_context.Customers?.Any(e => e.CustomerId == id)).GetValueOrDefault();
+            bool customerExists = _customerRepository.Exists(id);
+
+            if (customerExists)
+            {
+                return Content("Customer does indeed exists.");
+            }
+            else
+            {
+                return Content("Customer does not exists at all.");
+            }
         }
     }
 }
